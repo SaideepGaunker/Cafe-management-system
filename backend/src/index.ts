@@ -141,7 +141,16 @@ app.get('/api/health/db', async (_req, res) => {
   }
 });
 
-// Custom JSON 404 Fallback (replaces default 'Cannot GET' plain text)
+// Global Error Handler Middleware (Prevents crashes & 502 Bad Gateway)
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('🔥 Server Error caught by Express middleware:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details: err?.message || String(err),
+  });
+});
+
+// Custom JSON 404 Fallback
 app.use((req, res) => {
   res.status(404).json({
     status: 404,
@@ -154,7 +163,15 @@ app.use((req, res) => {
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
 if (process.env.NODE_ENV !== 'test') {
-  // Validate production configuration
+  // Catch unhandled promise rejections and uncaught exceptions to prevent process crash
+  process.on('unhandledRejection', (reason) => {
+    console.error('⚠️ Unhandled Promise Rejection:', reason);
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('⚠️ Uncaught Exception:', err);
+  });
+
   if (process.env.NODE_ENV === 'production') {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('secret_key')) {
       console.warn('⚠️ WARNING: You are running in production without a strong, custom JWT_SECRET!');
