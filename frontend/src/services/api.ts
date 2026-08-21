@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cafe-management-system11-production.up.railway.app/api';
 
 const getAuthHeader = (): Record<string, string> => {
   const token = localStorage.getItem('cafe_auth_token');
