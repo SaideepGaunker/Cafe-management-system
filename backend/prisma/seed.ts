@@ -99,6 +99,42 @@ async function main() {
     data: { name: 'Masala Chai Tea Concentrate', currentStock: 5000, unit: 'ml', reorderThreshold: 1000, costPerUnit: 0.006 },
   });
 
+  const condensedMilk = await prisma.ingredient.create({
+    data: { name: 'Sweetened Condensed Milk', currentStock: 4000, unit: 'ml', reorderThreshold: 1000, costPerUnit: 0.007 },
+  });
+
+  const blueberries = await prisma.ingredient.create({
+    data: { name: 'Organic Wild Blueberries', currentStock: 2000, unit: 'grams', reorderThreshold: 500, costPerUnit: 0.02 },
+  });
+
+  const almondFlakes = await prisma.ingredient.create({
+    data: { name: 'Toasted Almond Flakes', currentStock: 1500, unit: 'grams', reorderThreshold: 300, costPerUnit: 0.025 },
+  });
+
+  const bagels = await prisma.ingredient.create({
+    data: { name: 'Everything Artisan Bagels', currentStock: 80, unit: 'units', reorderThreshold: 20, costPerUnit: 0.60 },
+  });
+
+  const creamCheese = await prisma.ingredient.create({
+    data: { name: 'Whipped Cream Cheese', currentStock: 2500, unit: 'grams', reorderThreshold: 500, costPerUnit: 0.015 },
+  });
+
+  const smokedSalmon = await prisma.ingredient.create({
+    data: { name: 'Wild Alaskan Smoked Salmon', currentStock: 1200, unit: 'grams', reorderThreshold: 300, costPerUnit: 0.06 },
+  });
+
+  const mangoPuree = await prisma.ingredient.create({
+    data: { name: 'Tropical Mango Puree', currentStock: 3500, unit: 'ml', reorderThreshold: 700, costPerUnit: 0.009 },
+  });
+
+  const pistachioCream = await prisma.ingredient.create({
+    data: { name: 'Handcrafted Pistachio Sweet Cream', currentStock: 2500, unit: 'ml', reorderThreshold: 500, costPerUnit: 0.02 },
+  });
+
+  const crushedPistachios = await prisma.ingredient.create({
+    data: { name: 'Roasted Crushed Pistachios', currentStock: 1200, unit: 'grams', reorderThreshold: 300, costPerUnit: 0.035 },
+  });
+
   console.log('✅ Created ingredients with stock levels');
 
   // 4. Create Suppliers
@@ -306,6 +342,117 @@ async function main() {
         create: [
           { ingredientId: chaiConcentrate.id, quantityRequired: 100 },
           { ingredientId: oatMilk.id, quantityRequired: 150 },
+          { ingredientId: cups.id, quantityRequired: 1 },
+        ],
+      },
+    },
+  });
+
+  const spanishLatte = await prisma.menuItem.create({
+    data: {
+      name: 'Iced Spanish Latte',
+      description: 'Rich espresso layered with fresh milk and sweet condensed milk served over ice.',
+      price: 5.40,
+      category: 'Iced Coffee',
+      image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=600&auto=format&fit=crop&q=80',
+      isAvailable: true,
+      recipe: {
+        create: [
+          { ingredientId: espressoBeans.id, quantityRequired: 18 },
+          { ingredientId: wholeMilk.id, quantityRequired: 150 },
+          { ingredientId: condensedMilk.id, quantityRequired: 30 },
+          { ingredientId: cups.id, quantityRequired: 1 },
+        ],
+      },
+    },
+  });
+
+  const blueberryMuffin = await prisma.menuItem.create({
+    data: {
+      name: 'Wild Blueberry Almond Muffin',
+      description: 'Moist golden muffin packed with organic wild blueberries and topped with toasted almond slices.',
+      price: 4.20,
+      category: 'Bakery & Pastry',
+      image: 'https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=600&auto=format&fit=crop&q=80',
+      isAvailable: true,
+      recipe: {
+        create: [
+          { ingredientId: blueberries.id, quantityRequired: 30 },
+          { ingredientId: almondFlakes.id, quantityRequired: 10 },
+          { ingredientId: butter.id, quantityRequired: 25 },
+        ],
+      },
+    },
+  });
+
+  const salmonBagel = await prisma.menuItem.create({
+    data: {
+      name: 'Smoked Salmon & Cream Cheese Bagel',
+      description: 'Toasted everything bagel spread with whipped cream cheese, wild Alaskan smoked salmon, and fresh dill.',
+      price: 8.90,
+      category: 'Bakery & Pastry',
+      image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+      isAvailable: true,
+      recipe: {
+        create: [
+          { ingredientId: bagels.id, quantityRequired: 1 },
+          { ingredientId: creamCheese.id, quantityRequired: 40 },
+          { ingredientId: smokedSalmon.id, quantityRequired: 50 },
+        ],
+      },
+    },
+  });
+
+  const mangoSmoothie = await prisma.menuItem.create({
+    data: {
+      name: 'Tropical Mango Passion Smoothie',
+      description: 'Velvety blend of ripe mangoes, passionfruit, and oat milk. Refreshing and 100% natural.',
+      price: 6.20,
+      category: 'Smoothies & Refreshers',
+      image: 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=600&auto=format&fit=crop&q=80',
+      isAvailable: true,
+      recipe: {
+        create: [
+          { ingredientId: mangoPuree.id, quantityRequired: 180 },
+          { ingredientId: oatMilk.id, quantityRequired: 100 },
+          { ingredientId: cups.id, quantityRequired: 1 },
+        ],
+      },
+    },
+  });
+
+  const hazelnutColdBrew = await prisma.menuItem.create({
+    data: {
+      name: 'Hazelnut Cold Foam Brew',
+      description: '20-hour cold brew topped with handcrafted sweet hazelnut cold foam and vanilla syrup.',
+      price: 5.60,
+      category: 'Iced Coffee',
+      image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&auto=format&fit=crop&q=80',
+      isAvailable: true,
+      recipe: {
+        create: [
+          { ingredientId: espressoBeans.id, quantityRequired: 25 },
+          { ingredientId: wholeMilk.id, quantityRequired: 60 },
+          { ingredientId: vanillaSyrup.id, quantityRequired: 15 },
+          { ingredientId: cups.id, quantityRequired: 1 },
+        ],
+      },
+    },
+  });
+
+  const pistachioColdBrew = await prisma.menuItem.create({
+    data: {
+      name: 'Pistachio Sweet Cream Cold Brew',
+      description: 'Signature slow-steeped cold brew topped with silky handcrafted pistachio sweet cream and finished with roasted crushed pistachios.',
+      price: 5.90,
+      category: 'Iced Coffee',
+      image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=600&auto=format&fit=crop&q=80',
+      isAvailable: true,
+      recipe: {
+        create: [
+          { ingredientId: espressoBeans.id, quantityRequired: 25 },
+          { ingredientId: pistachioCream.id, quantityRequired: 50 },
+          { ingredientId: crushedPistachios.id, quantityRequired: 10 },
           { ingredientId: cups.id, quantityRequired: 1 },
         ],
       },

@@ -2,7 +2,16 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest, JwtPayload } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'cafe_artisan_secret_key_2026_super_secure';
+export const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: JWT_SECRET environment variable is required in production mode!');
+    }
+    return 'cafe_artisan_secret_key_2026_super_secure';
+  }
+  return secret;
+};
 
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -12,7 +21,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
     req.user = decoded;
     next();
   } catch (error) {

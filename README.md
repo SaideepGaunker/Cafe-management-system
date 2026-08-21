@@ -140,28 +140,3 @@ npm test
 ```
 
 ---
-
-## 🌐 Cloud Deployment Guide
-
-### Deploy Backend on Railway
-1. Create a project on [Railway.app](https://railway.app) connected to your GitHub repository.
-2. In **Settings** $\rightarrow$ **Root Directory**, set: `backend`.
-3. In **Variables**, add:
-   - `PORT=5000`
-   - `DATABASE_URL` *(Your MongoDB Atlas URL)*
-   - `JWT_SECRET`
-   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
-4. Copy your Railway public domain (e.g. `https://biiznest-backend.up.railway.app`).
-
-### Deploy Frontend on Vercel
-1. Create a project on [Vercel.com](https://vercel.com) connected to the same GitHub repository.
-2. Set **Root Directory** to: `frontend`.
-3. In **Environment Variables**, add:
-   - `VITE_API_URL`: `https://biiznest-backend.up.railway.app/api`
-   - `VITE_SOCKET_URL`: `https://biiznest-backend.up.railway.app`
-4. Deploy!
-
----
-
-## 📝 License
-This project is open source and available under the [MIT License](LICENSE).

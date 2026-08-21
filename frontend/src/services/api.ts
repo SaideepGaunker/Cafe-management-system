@@ -1,4 +1,12 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getBaseUrl = (): string => {
+  let url = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').trim().replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url += '/api';
+  }
+  return url;
+};
+
+const API_BASE_URL = getBaseUrl();
 
 const getAuthHeader = (): Record<string, string> => {
   const token = localStorage.getItem('cafe_auth_token');

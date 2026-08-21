@@ -2,11 +2,10 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
-import { authenticate, requireRoles } from '../middleware/auth';
+import { authenticate, requireRoles, getJwtSecret } from '../middleware/auth';
 import { AuthRequest, JwtPayload } from '../types';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'cafe_artisan_secret_key_2026_super_secure';
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 250): Promise<T> {
   let attempt = 0;
@@ -43,7 +42,7 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
-        const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET) as JwtPayload;
+        const decoded = jwt.verify(authHeader.split(' ')[1], getJwtSecret()) as JwtPayload;
         if (decoded.role === 'ADMIN' && role && ['STAFF', 'ADMIN'].includes(role)) {
           assignedRole = role;
         }
@@ -71,7 +70,7 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
 
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
@@ -112,7 +111,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
 
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 

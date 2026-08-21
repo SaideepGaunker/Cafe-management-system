@@ -2,16 +2,20 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { JwtPayload } from './types';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'cafe_artisan_secret_key_2026_super_secure';
+import { getJwtSecret } from './middleware/auth';
 
 let io: SocketIOServer | null = null;
 
 export const initSocket = (httpServer: HttpServer) => {
+  const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map((o) => o.trim())
+    : '*';
+
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: '*',
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 
@@ -24,7 +28,7 @@ export const initSocket = (httpServer: HttpServer) => {
 
     if (token && typeof token === 'string') {
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+        const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
         (socket as any).user = decoded;
       } catch (err) {
         // Invalid or expired token: proceed as guest

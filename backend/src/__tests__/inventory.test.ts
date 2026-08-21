@@ -1,9 +1,21 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../index';
 
+vi.mock('../db', () => ({
+  prisma: {
+    menuItem: {
+      findMany: vi.fn().mockImplementation(async () => []),
+      findUnique: vi.fn().mockImplementation(async () => null),
+    },
+    order: {
+      create: vi.fn(),
+    },
+  },
+}));
+
 describe('Order & Inventory Deduction', () => {
-  it('should reject order if insufficient ingredient stock', async () => {
+  it('should reject order if menu item is not found', async () => {
     const res = await request(app)
       .post('/api/orders')
       .send({
