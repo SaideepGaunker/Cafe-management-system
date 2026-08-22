@@ -14,7 +14,7 @@ import { ToastContainer } from './components/ToastContainer';
 import type { ToastMessage } from './components/ToastContainer';
 import type { MenuItem, Ingredient, Order, CartItem, User, OrderStatus } from './types';
 import { api, processOfflineOrderQueue } from './services/api';
-import { socket, updateSocketAuthToken } from './services/socket';
+import { socket, updateSocketAuthToken, joinOrderTrackingRoom } from './services/socket';
 
 const MainAppLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -67,6 +67,12 @@ const MainAppLayout: React.FC = () => {
       localStorage.setItem('cafe_cart_items', JSON.stringify(cartItems));
     } catch {}
   }, [cartItems]);
+
+  useEffect(() => {
+    if (trackedOrderId) {
+      joinOrderTrackingRoom(trackedOrderId);
+    }
+  }, [trackedOrderId]);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);

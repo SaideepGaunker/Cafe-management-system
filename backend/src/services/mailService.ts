@@ -37,20 +37,15 @@ export function getTransporter(): nodemailer.Transporter {
   const pass = process.env.SMTP_PASS;
 
   if (host && user && pass) {
-    const isGmail = host.toLowerCase().includes('gmail');
-    if (isGmail) {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user, pass },
-      });
-    } else {
-      transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465,
-        auth: { user, pass },
-      });
-    }
+    transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
   } else {
     // Fallback transport for development / testing when SMTP credentials are not present
     transporter = nodemailer.createTransport({
@@ -65,18 +60,53 @@ export function setTransporter(customTransporter: nodemailer.Transporter | null)
   transporter = customTransporter;
 }
 
-export function generateOrderStatusEmailHtml(order: OrderEmailDetails, status: 'READY' | 'OUT_FOR_DELIVERY'): string {
+export function generateOrderStatusEmailHtml(order: OrderEmailDetails, status: string): string {
   const shortId = order.id.slice(0, 8);
-  const isDelivery = status === 'OUT_FOR_DELIVERY';
-  const headerTitle = isDelivery ? '🚗 Your Order is Out for Delivery!' : '☕ Your Order is Ready!';
-  const headerBg = isDelivery ? '#10B981' : '#F59E0B';
+
+  let headerTitle = `Order Update (#${shortId})`;
+  let headerBg = '#F59E0B';
+  let messageText = `Your order status is now <strong>${status}</strong>.`;
+
+  switch (status) {
+    case 'CONFIRMATION':
+    case 'PENDING':
+      headerTitle = '🎉 Order Confirmation!';
+      headerBg = '#3B82F6';
+      messageText = 'Thank you for your order! It has been received and sent to our baristas.';
+      break;
+    case 'IN_PROGRESS':
+      headerTitle = '🔥 Preparation Started!';
+      headerBg = '#F59E0B';
+      messageText = 'Great news! Our baristas & kitchen staff have started preparing your order.';
+      break;
+    case 'READY':
+      headerTitle = '☕ Your Order is Ready!';
+      headerBg = '#10B981';
+      messageText = 'Your order has been freshly prepared and is now <strong>ready for pickup</strong>!';
+      break;
+    case 'OUT_FOR_DELIVERY':
+      headerTitle = '🚗 Your Order is Out for Delivery!';
+      headerBg = '#10B981';
+      messageText = 'Great news! Your order is freshly prepared and now <strong>out for delivery</strong>. Our driver is on the way!';
+      break;
+    case 'COMPLETED':
+      headerTitle = '✅ Order Completed!';
+      headerBg = '#10B981';
+      messageText = 'Your order has been completed. Thank you for ordering with BiiZnest!';
+      break;
+    case 'CANCELLED':
+      headerTitle = '❌ Order Cancelled';
+      headerBg = '#EF4444';
+      messageText = 'Your order has been cancelled. If you have questions, please contact our support team.';
+      break;
+  }
 
   const itemsListHtml = order.items
     .map(
       (item) => `
       <tr>
         <td style="padding: 10px 0; border-bottom: 1px solid #334155; color: #f8fafc;">
-          ${item.menuItem.name} <span style="color: #94a3b8;">x${item.quantity}</span>
+          ${item.menuItem?.name || 'Menu Item'} <span style="color: #94a3b8;">x${item.quantity}</span>
         </td>
         <td style="padding: 10px 0; border-bottom: 1px solid #334155; color: #f59e0b; text-align: right; font-weight: bold;">
           $${(item.unitPrice * item.quantity).toFixed(2)}
@@ -107,12 +137,7 @@ export function generateOrderStatusEmailHtml(order: OrderEmailDetails, status: '
     <tr>
       <td style="padding: 30px;">
         <p style="font-size: 16px; margin-top: 0;">Hi <strong>${order.customerName}</strong>,</p>
-        
-        ${
-          isDelivery
-            ? `<p style="font-size: 15px; color: #cbd5e1; line-height: 1.6;">Great news! Your order is freshly prepared and now <strong>out for delivery</strong>. Our delivery driver is on their way to you!</p>`
-            : `<p style="font-size: 15px; color: #cbd5e1; line-height: 1.6;">Your order has been freshly prepared by our baristas and is now <strong>ready for pickup</strong>!</p>`
-        }
+        <p style="font-size: 15px; color: #cbd5e1; line-height: 1.6;">${messageText}</p>
 
         <!-- Details Box -->
         <div style="background-color: #0f172a; border-radius: 12px; padding: 18px; margin: 20px 0; border: 1px solid #334155;">
@@ -147,7 +172,7 @@ export function generateOrderStatusEmailHtml(order: OrderEmailDetails, status: '
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
           ${itemsListHtml}
           <tr>
-            <td style="padding-top: 14px; font-size: 16px; font-weight: bold; color: #f8fafc;">Total Paid</td>
+            <td style="padding-top: 14px; font-size: 16px; font-weight: bold; color: #f8fafc;">Total Amount</td>
             <td style="padding-top: 14px; font-size: 18px; font-weight: bold; color: #f59e0b; text-align: right;">$${order.totalAmount.toFixed(2)}</td>
           </tr>
         </table>
@@ -168,7 +193,7 @@ export function generateOrderStatusEmailHtml(order: OrderEmailDetails, status: '
 export async function sendOrderStatusEmail(
   order: OrderEmailDetails,
   recipientEmail: string,
-  status: 'READY' | 'OUT_FOR_DELIVERY'
+  status: string
 ) {
   try {
     const activeTransporter = getTransporter();
@@ -176,13 +201,18 @@ export async function sendOrderStatusEmail(
     const subject =
       status === 'OUT_FOR_DELIVERY'
         ? `🚗 Your BiiZnest Order #${order.id.slice(0, 8)} is Out for Delivery!`
-        : `☕ Your BiiZnest Order #${order.id.slice(0, 8)} is Ready!`;
+        : status === 'READY'
+        ? `☕ Your BiiZnest Order #${order.id.slice(0, 8)} is Ready!`
+        : status === 'IN_PROGRESS'
+        ? `🔥 Your BiiZnest Order #${order.id.slice(0, 8)} is in Preparation!`
+        : status === 'COMPLETED'
+        ? `✅ Your BiiZnest Order #${order.id.slice(0, 8)} is Completed!`
+        : status === 'CANCELLED'
+        ? `❌ Your BiiZnest Order #${order.id.slice(0, 8)} has been Cancelled`
+        : `🎉 Your BiiZnest Order #${order.id.slice(0, 8)} Confirmation`;
 
     const html = generateOrderStatusEmailHtml(order, status);
-    const text =
-      status === 'OUT_FOR_DELIVERY'
-        ? `Hi ${order.customerName}, your BiiZnest Order #${order.id.slice(0, 8)} is out for delivery! Total: $${order.totalAmount.toFixed(2)}.`
-        : `Hi ${order.customerName}, your BiiZnest Order #${order.id.slice(0, 8)} is ready! Total: $${order.totalAmount.toFixed(2)}.`;
+    const text = `Hi ${order.customerName}, your BiiZnest Order #${order.id.slice(0, 8)} status is currently: ${status}. Total: $${order.totalAmount.toFixed(2)}.`;
 
     const mailOptions = {
       from: fromAddress,

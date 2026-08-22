@@ -168,6 +168,14 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     // Real-time broadcast
     emitOrderCreated(order.createdOrder);
 
+    // Send Mail notification for order confirmation
+    const recipientEmail = order.createdOrder.customerEmail || order.createdOrder.user?.email;
+    if (recipientEmail) {
+      sendOrderStatusEmail(order.createdOrder, recipientEmail, 'CONFIRMATION').catch((err) => {
+        console.error(`Failed sending confirmation email for Order ${order.createdOrder.id}:`, err);
+      });
+    }
+
     if (order.lowStockAlerts.length > 0) {
       for (const alert of order.lowStockAlerts) {
         emitLowStockAlert(alert);
@@ -323,16 +331,14 @@ router.patch('/:id/status', authenticate, requireRoles(['STAFF', 'ADMIN']), asyn
     // Emit socket event
     emitOrderStatusUpdated(updatedOrder);
 
-    // Send Mail notification if order is READY or OUT_FOR_DELIVERY
-    if (status === 'READY' || status === 'OUT_FOR_DELIVERY') {
-      const recipientEmail = updatedOrder.customerEmail || updatedOrder.user?.email;
-      if (recipientEmail) {
-        sendOrderStatusEmail(updatedOrder, recipientEmail, status).catch((err) => {
-          console.error(`Failed sending status email for Order ${updatedOrder.id}:`, err);
-        });
-      } else {
-        console.warn(`⚠️ Order #${updatedOrder.id.slice(0, 8)} status set to ${status}, but no customer email address was recorded for this order.`);
-      }
+    // Send Mail notification for status changes
+    const recipientEmail = updatedOrder.customerEmail || updatedOrder.user?.email;
+    if (recipientEmail) {
+      sendOrderStatusEmail(updatedOrder, recipientEmail, status).catch((err) => {
+        console.error(`Failed sending status email for Order ${updatedOrder.id}:`, err);
+      });
+    } else {
+      console.warn(`⚠️ Order #${updatedOrder.id.slice(0, 8)} status set to ${status}, but no customer email address was recorded.`);
     }
 
     return res.json({ message: 'Order status updated successfully', order: updatedOrder });

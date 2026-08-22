@@ -13,8 +13,21 @@ export const initSocket = (httpServer: HttpServer) => {
 
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: allowedOrigins,
-      methods: ['GET', 'POST'],
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins === '*' || allowedOrigins.includes('*')) {
+          return callback(null, true);
+        }
+        const isExplicitlyAllowed = allowedOrigins.includes(origin);
+        const isVercelDomain = origin.endsWith('.vercel.app');
+        const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+
+        if (isExplicitlyAllowed || isVercelDomain || isLocalhost) {
+          return callback(null, true);
+        }
+        return callback(null, true);
+      },
+      methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
       credentials: true,
     },
   });
@@ -76,37 +89,32 @@ export const emitDataUpdated = () => {
   }
 };
 
-// Emit order creation: Send to staff_room (and customer room if applicable), and notify all clients to update stock data
+// Emit order creation: Broadcast to all clients so order queues & customer dashboards update live
 export const emitOrderCreated = (order: any) => {
   if (io) {
-    // Notify staff & admins
+    io.emit('orderCreated', order);
     io.to('staff_room').emit('orderCreated', order);
-
-    // Notify individual customer if order is linked to user
     if (order.userId) {
       io.to(`user:${order.userId}`).emit('orderCreated', order);
     }
-
-    // Broadcast data update so all client screens refresh menu stock & order queue automatically
     io.emit('dataUpdated');
   }
 };
 
-// Emit order status update: Send to staff_room, order tracking room, customer room, and notify all clients
+// Emit order status update: Broadcast to ALL connected clients so customer screen updates in real-time
 export const emitOrderStatusUpdated = (order: any) => {
   if (io) {
-    // Notify kitchen & staff
+    // Broadcast directly to all clients for instant re-render across UI
+    io.emit('orderStatusUpdated', order);
+
+    // Also send to targeted rooms
     io.to('staff_room').emit('orderStatusUpdated', order);
-
-    // Notify public tracking room
     io.to(`order:${order.id}`).emit('orderStatusUpdated', order);
-
-    // Notify individual customer
     if (order.userId) {
       io.to(`user:${order.userId}`).emit('orderStatusUpdated', order);
     }
 
-    // Broadcast data update so all client screens refresh live status & inventory
+    // Broadcast data update signal
     io.emit('dataUpdated');
   }
 };
