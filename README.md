@@ -1,6 +1,14 @@
 # ☕ BiiZnest - Real-Time Cafe Management System (CMS) & POS
 
+[![Live Application](https://img.shields.io/badge/🌐%20Live%20App-cafe--management--system--drab--sigma.vercel.app-F59E0B?style=for-the-badge&logo=vercel)](https://cafe-management-system-drab-sigma.vercel.app/)
+[![Backend API](https://img.shields.io/badge/⚡%20Railway%20API-Production-0B0D12?style=for-the-badge&logo=railway)](https://cafe-management-system11-production.up.railway.app/api)
+
+> **Live Website URL**: [https://cafe-management-system-drab-sigma.vercel.app/](https://cafe-management-system-drab-sigma.vercel.app/)
+
 **BiiZnest** is an end-to-end, full-stack Cafe Management System (CMS) and Point-of-Sale (POS) application built for modern cafes and restaurants. It features real-time order tracking, automated inventory deduction, kitchen queue management, offline sales queuing, role-scoped WebSocket alerts, and automated email notifications.
+
+### 🖼️ Live Application Preview
+![BiiZnest Live Application Preview](./frontend/public/preview.jpg)
 
 ---
 
