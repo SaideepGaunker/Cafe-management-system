@@ -136,3 +136,34 @@ Active Bugs & AI Execution Guide
     - Remove the newly inserted duplicate live order tracking widget from the customer dashboard.
     - Locate the original "Track Product" component / modal opened via the track button.
     - Connect WebSocket real-time listeners (`order_status_updated` / socket events) to the original "Track Product" component to update live order status dynamically without requiring manual reloads.
+
+[x] Bug 7: Dashboard UI & Product Cards Display Layout Broken After Widget Removal
+    Severity: High
+
+    Affected Area: Customer Dashboard UI, Product Cards Grid / Container
+
+    Description:
+    Removing the live tracking widget from the dashboard corrupted the overall layout and styling of the customer dashboard. The product cards are no longer displayed properly, causing visual alignment and grid structure issues across the page.
+
+    Root Cause Analysis:
+    - CSS grid/flex layout containers or JSX wrapper tags on the customer dashboard were altered or removed alongside the tracking widget, breaking the responsiveness and card grid structure.
+
+    Action Items / Tasks:
+    - Restore the customer dashboard's layout wrappers, CSS grid/flex styling, and container hierarchy.
+    - Ensure product cards render with proper spacing, alignment, and responsiveness as in the previous working dashboard design.
+
+[x] Bug 8: Inner "Track Product" Modal / View Not Receiving Real-Time Live Order Updates
+    Severity: High
+
+    Affected Area: "Track Product" Button / Order Tracking Modal / Detailed View
+
+    Description:
+    The primary inner order tracking feature (which activates upon clicking the "Track Product" button) is not receiving real-time live status updates when order statuses change. While the previously removed dashboard widget had working real-time updates, the inner "Track Product" component was not working in real time previously and remains non-functional.
+
+    Root Cause Analysis:
+    - The modal/view opened by the "Track Product" button is not subscribed to the WebSocket event channel or is missing reactive state bindings for incoming `order_status_updated` / `status_changed` payloads.
+
+    Action Items / Tasks:
+    - Inspect the component/modal activated by the "Track Product" button.
+    - Wire WebSocket / Socket.io listeners and room subscriptions into the inner "Track Product" component.
+    - Verify that order status steps (Pending -> Preparing -> Ready -> Delivered/Completed) advance live in the inner tracking view without requiring manual page refresh.

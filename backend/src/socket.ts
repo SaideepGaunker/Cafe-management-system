@@ -107,12 +107,16 @@ export const emitOrderStatusUpdated = (order: any) => {
   if (io) {
     // Broadcast directly to all clients for instant re-render across UI
     io.emit('orderStatusUpdated', order);
+    io.emit('order_status_updated', order);
 
     // Also send to targeted rooms
     io.to('staff_room').emit('orderStatusUpdated', order);
+    io.to('staff_room').emit('order_status_updated', order);
     io.to(`order:${order.id}`).emit('orderStatusUpdated', order);
+    io.to(`order:${order.id}`).emit('order_status_updated', order);
     if (order.userId) {
       io.to(`user:${order.userId}`).emit('orderStatusUpdated', order);
+      io.to(`user:${order.userId}`).emit('order_status_updated', order);
     }
 
     // Broadcast data update signal

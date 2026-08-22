@@ -31,8 +31,9 @@ export const OrderTrackerModal: React.FC<OrderTrackerModalProps> = ({ orderId, o
     // Join real-time room for live status changes
     joinOrderTrackingRoom(orderId);
 
-    const handleStatusUpdate = (updatedOrder: Order) => {
-      if (updatedOrder.id === orderId) {
+    const handleStatusUpdate = (payload: any) => {
+      const updatedOrder = payload?.order || payload;
+      if (updatedOrder && (updatedOrder.id === orderId || updatedOrder.id === order?.id)) {
         setOrder(updatedOrder);
       }
     };
@@ -46,10 +47,12 @@ export const OrderTrackerModal: React.FC<OrderTrackerModalProps> = ({ orderId, o
     };
 
     socket.on('orderStatusUpdated', handleStatusUpdate);
+    socket.on('order_status_updated', handleStatusUpdate);
     socket.on('dataUpdated', handleDataUpdated);
 
     return () => {
       socket.off('orderStatusUpdated', handleStatusUpdate);
+      socket.off('order_status_updated', handleStatusUpdate);
       socket.off('dataUpdated', handleDataUpdated);
     };
   }, [orderId]);
