@@ -145,6 +145,9 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           items: {
             include: { menuItem: true },
           },
+          user: {
+            select: { name: true, email: true },
+          },
         },
       });
 
