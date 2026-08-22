@@ -13,6 +13,7 @@ import supplierRoutes from './routes/suppliers';
 import reportRoutes from './routes/reports';
 import { initSocket } from './socket';
 import { prisma } from './db';
+import { verifyTransporter } from './services/mailService';
 
 const app = express();
 const server = http.createServer(app);
@@ -183,6 +184,9 @@ if (process.env.NODE_ENV !== 'test') {
 
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Cafe Management System Backend server running on port ${PORT}`);
+    verifyTransporter().catch((err) => {
+      console.error('SMTP verification diagnostic error:', err);
+    });
   });
 
   const gracefulShutdown = (signal: string) => {

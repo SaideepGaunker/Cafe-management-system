@@ -56,6 +56,29 @@ export function getTransporter(): nodemailer.Transporter {
   return transporter;
 }
 
+export async function verifyTransporter(): Promise<boolean> {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    console.warn(
+      '⚠️ SMTP Configuration Warning: SMTP_HOST, SMTP_USER, or SMTP_PASS environment variables are missing. Falling back to development jsonTransport.'
+    );
+    return false;
+  }
+
+  try {
+    const activeTransporter = getTransporter();
+    await activeTransporter.verify();
+    console.log(`✅ SMTP Mail Server Connection Verified (${host}:${process.env.SMTP_PORT || '587'}) for ${user}`);
+    return true;
+  } catch (error: any) {
+    console.error(`❌ SMTP Mail Server Verification Failed (${host}):`, error?.message || error);
+    return false;
+  }
+}
+
 export function setTransporter(customTransporter: nodemailer.Transporter | null) {
   transporter = customTransporter;
 }

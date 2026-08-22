@@ -109,4 +109,35 @@ describe('Mail Notification Service', () => {
       expect(res).toBeNull();
     });
   });
+
+  describe('verifyTransporter', () => {
+    it('should return false when SMTP env vars are missing', async () => {
+      const originalHost = process.env.SMTP_HOST;
+      delete process.env.SMTP_HOST;
+
+      const { verifyTransporter } = await import('../services/mailService');
+      const verified = await verifyTransporter();
+      expect(verified).toBe(false);
+
+      if (originalHost) process.env.SMTP_HOST = originalHost;
+    });
+
+    it('should return true when active transporter verification succeeds', async () => {
+      process.env.SMTP_HOST = 'smtp.gmail.com';
+      process.env.SMTP_USER = 'test@cafe.com';
+      process.env.SMTP_PASS = 'abcd1234efgh5678';
+
+      const mockTransporter = {
+        verify: vi.fn().mockResolvedValue(true),
+      } as unknown as nodemailer.Transporter;
+
+      setTransporter(mockTransporter);
+
+      const { verifyTransporter } = await import('../services/mailService');
+      const verified = await verifyTransporter();
+
+      expect(mockTransporter.verify).toHaveBeenCalledTimes(1);
+      expect(verified).toBe(true);
+    });
+  });
 });

@@ -7,37 +7,27 @@ Active Bugs & AI Execution Guide
 * Pushing the code to the gate to perform test cases and then once the test cases have passed, you push the code. 
 
 ## Bug Checklist
-[x] Bug 1: Authentication Token Missing/Malformed on Protected Profile & Order Requests
-    Severity: High / Blocker
+[x] Bug 1: Gmail Order Status Email Notifications Not Received by Customers
+    Severity: High / Critical
 
-    Affected Area: Customer Profile (/profile), Address Management, Order History (/orders)
+    Affected Area: Backend Mail Service (`mailService.ts`), Order Status Controller (`orders.ts`), Nodemailer SMTP / Gmail Configuration & Delivery
 
     Description:
-    When an authenticated customer attempts to mutate profile data (add/update phone number, add address) or fetch order history (completed/pending orders), the requests fail with authentication errors.
-
-    Error Logs / UI Errors:
-
-    Phone update: "missing valid tokens"
-
-    Address update: "Unauthorized: Missing or invalid token formaUnauthorized: Missing or invalid token format"
-
-    Orders view: Blank / 401 Unauthorized (orders list not rendering)
+    Email notifications for order lifecycle updates (e.g., "Order Confirmation", "In Preparation / In Progress", "Ready for Pickup", "Out for Delivery", and "Completed") are delivered to customers' Gmail inboxes. When an order is placed or when staff/admin updates the order status in the Kitchen KDS or Admin Portal, Nodemailer dispatches HTML email notifications with startup transport verification.
 
     Root Cause Analysis:
-
-    The frontend API client/interceptor is either omitting the Authorization header, passing Bearer undefined/Bearer null, or improperly formatting the header string.
-
-    Token refresh lifecycle or token retrieval from storage (localStorage/cookies/Auth Context) is failing before these specific endpoint calls.
+    - Missing or misconfigured SMTP environment variables (`SMTP_USER`, `SMTP_PASS` / Gmail App Password, `SMTP_HOST`, `SMTP_PORT`, `EMAIL_FROM`) in the backend hosting environment (e.g., Railway / `.env`).
+    - Gmail SMTP authentication failure (e.g., standard Google account password used instead of a 16-character Google App Password, or 2-Factor Authentication blocking basic SMTP login).
+    - Asynchronous transport / connection failure in `sendOrderStatusEmail` when Nodemailer fails to establish TLS/SSL handshake with `smtp.gmail.com:587` or `smtp.gmail.com:465`.
+    - Null or unpopulated `customerEmail` on the order record during status update payload processing.
+    - Outgoing mail silently dropped, delayed, or flagged by spam filters due to missing SPF/DKIM or cloud server IP reputation.
 
     Action Items / Tasks:
-
-    Inspect the API request wrapper/interceptor for profile, address, and order endpoints.
-
-    Ensure the header attaches properly: Authorization: Bearer <token>.
-
-    Implement fallback token validation / automatic redirect to login or silent refresh when the token is missing/expired.
-
-    Fix backend auth middleware string-parsing to prevent concatenated error strings.
+    - [x] Verify and configure SMTP environment credentials (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`) in backend deployment environment.
+    - [x] Ensure a valid 16-character Google App Password is generated and applied in `SMTP_PASS`.
+    - [x] Check backend server logs for Nodemailer error traces during `sendOrderStatusEmail` invocations.
+    - [x] Validate that `order.customerEmail` and `order.user.email` are reliably captured and passed to the mail service during status updates.
+    - [x] Implement Nodemailer startup verification (`transporter.verify()`) to log clear diagnostic warnings if the mail server is unreachable or credentials are invalid.
 
 [x] Bug 2: Live Order Status Not Updating in Real-Time (Requires Hard Reload)
     Severity: Medium / High
