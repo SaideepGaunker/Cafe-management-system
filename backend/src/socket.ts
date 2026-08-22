@@ -41,7 +41,8 @@ export const initSocket = (httpServer: HttpServer) => {
 
     if (token && typeof token === 'string') {
       try {
-        const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
+        const sanitizedToken = token.replace(/^"(.*)"$/, '$1').trim();
+        const decoded = jwt.verify(sanitizedToken, getJwtSecret()) as JwtPayload;
         (socket as any).user = decoded;
       } catch (err) {
         // Invalid or expired token: proceed as guest
