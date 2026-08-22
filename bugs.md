@@ -210,3 +210,63 @@ Active Bugs & AI Execution Guide
     - [x] Enforce dynamic stock-based quantity limits on both frontend and backend (allow ordering up to available stock, e.g., 100 if stock is 100).
     - [x] Ensure robust batch insertion, inventory deduction, and atomic transactions for multi-item (3+) and multi-quantity orders.
     - [x] Eliminate all failure points to guarantee seamless order placement for any valid stock-compliant order.
+
+[x] Bug 12: Incomplete User Session Termination on Logout Causing Cross-Role Auto-Login via URL Navigation
+    Severity: High / Critical
+
+    Affected Area: Frontend Auth State Management (`App.tsx`), LocalStorage / Session Token Lifecycle, Route Guards & Navigation
+
+    Description:
+    When any user (Staff, Admin, or Customer) logs out and subsequently attempts to access the login page or customer storefront by typing the URL and pressing Enter, the application treats them as logged out cleanly.
+
+    Root Cause Analysis:
+    - `handleLogout` only partially cleared auth state, leaving lingering user objects in `localStorage` (`cafe_user`).
+    - App initialization (`fetchData`) restored user session from un-cleared `cafe_user` when tokens were absent.
+
+    Action Items / Tasks:
+    - [x] Perform full session purge on logout: remove all auth tokens (`cafe_auth_token`), user data (`cafe_user`), tracked order, cart items, and socket authentication across all components.
+    - [x] Invalidate and reset client-side user state (`currentUser`, `orders`, `cartItems`, `ingredients`) to prevent lingering state reuse.
+    - [x] Enforce strict route guards so that accessing `/` or `/staff-portal` post-logout presents a clean unauthenticated/login state rather than auto-authenticating with stale credentials.
+    - [x] Validate logout and URL re-entry across all user roles (Staff -> Customer, Admin -> Staff, Customer -> Staff) to guarantee absolute session isolation.
+
+[x] Bug 13: Incomplete Mobile Responsiveness & Viewport Optimization Across Core UI Views
+    Severity: Medium / High
+
+    Affected Area: Customer Storefront, Navbar, Cart Drawer & Checkout, Kitchen KDS, Admin Dashboard / Inventory Tables, Offline POS & Profile
+
+    Description:
+    The application user interface is fully responsive across desktop, tablet, and mobile viewports (< 768px, < 480px, < 360px). All views render cleanly without horizontal overflow, touch targets are optimized, and card grids scale fluidly.
+
+    Root Cause Analysis:
+    - Fixed pixel widths and rigid grid layouts without fluid responsive `minmax()` or auto-fit wrapping.
+    - Missing CSS media query breakpoints for mobile screen sizes (320px - 768px).
+
+    Action Items / Tasks:
+    - [x] Establish cohesive responsive media query breakpoints (320px, 375px, 480px, 768px, 1024px) across all global styles and components.
+    - [x] Refactor Customer Storefront (Hero banner, Category filter pills, Product Card grid, Live Tracker) for fluid mobile layouts and single/two-column scaling.
+    - [x] Optimize Cart Drawer, Checkout, and Auth Modals for mobile viewports with flexible bottom-sheet styling and full touch accessibility.
+    - [x] Convert dense Admin Inventory / Order tables to responsive card layouts or horizontally scrollable containers on mobile.
+    - [x] Ensure Kitchen KDS and Offline POS provide touch-friendly, ergonomic card layouts on mobile and tablet screens.
+    - [x] Eliminate all unintended horizontal page scroll (`overflow-x: hidden`) and guarantee smooth, polished 60fps mobile touch interaction.
+
+[x] Bug 14: Gmail Order Lifecycle Email Notifications Not Delivering to Customer Inboxes
+    Severity: High / Critical
+
+    Affected Area: Backend Mail Service (`mailService.ts`), Order Creation & Status Controller (`orders.ts`), Frontend Cart/Checkout (`CartDrawer.tsx`), SMTP Environment Credentials (`.env`)
+
+    Description:
+    Real-time Gmail email notifications for order lifecycle milestones (Order Confirmation, Preparation Started, Ready for Pickup, Out for Delivery, and Order Completed/Cancelled) are delivered to customers' inboxes via Nodemailer with Gmail service optimization and password sanitization.
+
+    Root Cause Analysis:
+    - Password formatting and whitespace handling in Google App Passwords (`SMTP_PASS`).
+    - Sender address header (`SMTP_FROM`) mismatch with authenticated `SMTP_USER`.
+    - Missing frontend checkout email validation.
+
+    Action Items / Tasks:
+    - [x] Update `SMTP_PASS` handling in `mailService.ts` to sanitize and strip whitespace from Google App Passwords.
+    - [x] Correct `SMTP_FROM` to match the exact authenticated Gmail address (`SMTP_USER`).
+    - [x] Enhance `mailService.ts` transporter configuration to support direct `service: 'gmail'` profile with robust startup verification.
+    - [x] Enforce frontend email validation in `CartDrawer.tsx` so customers provide a valid email format to receive receipts and status tracking alerts.
+    - [x] Validate end-to-end delivery of all 5 email templates (Confirmation, In Progress, Ready, Out for Delivery, Completed) to active Gmail addresses.
+
+

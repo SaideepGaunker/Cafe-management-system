@@ -34,18 +34,32 @@ export function getTransporter(): nodemailer.Transporter {
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const rawPass = process.env.SMTP_PASS;
+  // Sanitize password by stripping spaces (Google App Passwords are 16 chars, often formatted with spaces like "xxxx xxxx xxxx xxxx")
+  const pass = rawPass ? rawPass.replace(/\s+/g, '') : undefined;
 
-  if (host && user && pass) {
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
+  if (user && pass) {
+    if (host && (host.includes('gmail.com') || host === 'smtp.gmail.com')) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user, pass },
+        tls: { rejectUnauthorized: false },
+      });
+    } else if (host) {
+      transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: { user, pass },
+        tls: { rejectUnauthorized: false },
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user, pass },
+        tls: { rejectUnauthorized: false },
+      });
+    }
   } else {
     // Fallback transport for development / testing when SMTP credentials are not present
     transporter = nodemailer.createTransport({
@@ -220,7 +234,8 @@ export async function sendOrderStatusEmail(
 ) {
   try {
     const activeTransporter = getTransporter();
-    const fromAddress = process.env.SMTP_FROM || '"BiiZnest" <notifications@biiznest.com>';
+    const userEmail = process.env.SMTP_USER;
+    const fromAddress = process.env.SMTP_FROM || (userEmail ? `"BiiZnest" <${userEmail}>` : '"BiiZnest" <notifications@biiznest.com>');
     const subject =
       status === 'OUT_FOR_DELIVERY'
         ? `🚗 Your BiiZnest Order #${order.id.slice(0, 8)} is Out for Delivery!`

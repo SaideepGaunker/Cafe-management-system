@@ -129,6 +129,9 @@ const MainAppLayout: React.FC = () => {
         }
       } else {
         setIsAuthLoading(false);
+        setCurrentUser(null);
+        localStorage.removeItem('cafe_user');
+        updateSocketAuthToken(null);
         try {
           const ordRes = await api.get('/orders');
           setOrders(ordRes.orders || []);
@@ -296,9 +299,16 @@ const MainAppLayout: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('cafe_auth_token');
+    localStorage.removeItem('cafe_user');
+    localStorage.removeItem('cafe_tracked_order_id');
+    localStorage.removeItem('cafe_cart_items');
     updateSocketAuthToken(null);
     setCurrentUser(null);
-    navigate('/');
+    setOrders([]);
+    setCartItems([]);
+    setIngredients([]);
+    updateTrackedOrderId(null);
+    navigate('/', { replace: true });
     addToast('Logged Out', 'You have been logged out.', 'info');
   };
 

@@ -116,6 +116,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       setError('Please enter your full name');
       return;
     }
+    if (!customerEmail.trim() || !customerEmail.includes('@')) {
+      setError('Please enter a valid email address to receive order confirmation & tracking updates');
+      return;
+    }
     if (!phone.trim()) {
       setError('Please enter your contact phone number');
       return;
