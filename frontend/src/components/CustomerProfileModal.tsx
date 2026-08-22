@@ -44,11 +44,11 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
   const [profileOrders, setProfileOrders] = useState<Order[]>(orders);
 
   useEffect(() => {
-    if (currentUser) {
+    if (isOpen && currentUser) {
       setName(currentUser.name || '');
       setPhone(currentUser.phone || '');
     }
-  }, [currentUser]);
+  }, [isOpen, currentUser?.id]);
 
   useEffect(() => {
     setProfileOrders(orders);

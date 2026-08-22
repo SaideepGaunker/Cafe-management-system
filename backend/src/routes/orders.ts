@@ -65,8 +65,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       });
 
       // Calculate ingredient requirements
-      for (const recipeItem of dbItem.recipe) {
+      for (const recipeItem of dbItem.recipe || []) {
         const ing = recipeItem.ingredient;
+        if (!ing) continue;
+
         const totalNeeded = recipeItem.quantityRequired * quantity;
 
         if (!requiredIngredients[ing.id]) {
@@ -130,16 +132,15 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         },
       });
 
-      // Deduct ingredient stock and log transaction
+      // Deduct ingredient stock atomically and log transaction
       const lowStockAlerts: { id: string; name: string; currentStock: number; threshold: number }[] = [];
 
       for (const ingId in requiredIngredients) {
         const ing = requiredIngredients[ingId];
-        const newStock = ing.currentStock - ing.required;
 
-        await tx.ingredient.update({
+        const updatedIng = await tx.ingredient.update({
           where: { id: ingId },
-          data: { currentStock: newStock },
+          data: { currentStock: { decrement: ing.required } },
         });
 
         await tx.stockTransaction.create({
@@ -152,11 +153,11 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           },
         });
 
-        if (newStock <= ing.threshold) {
+        if (updatedIng.currentStock <= ing.threshold) {
           lowStockAlerts.push({
             id: ingId,
             name: ing.name,
-            currentStock: newStock,
+            currentStock: updatedIng.currentStock,
             threshold: ing.threshold,
           });
         }

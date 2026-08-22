@@ -85,3 +85,37 @@ Active Bugs & AI Execution Guide
     Ensure message broker (e.g., Redis adapter for Socket.io) is enabled if running multi-instance production servers.
 
     Verify UI toast/notification provider is hooked into the socket listener.
+
+[x] Bug 4: Phone Number Input Auto-Erase / Overwrite Issue in Customer Profile
+    Severity: High
+
+    Affected Area: Customer Profile (/profile), Phone Number Input / Management
+
+    Description:
+    In the customer profile, when a user attempts to add/enter a phone number, the field automatically erases typed digits. For instance, after entering five numbers, all five digits get erased, and the sixth number is typed at the first position.
+
+    Root Cause Analysis:
+    - Input masking or controlled input `onChange` / formatting logic resetting or miscalculating string slicing when reaching a specific digit count.
+    - Regex pattern replacement or form state synchronization resetting state unexpectedly on intermediate inputs.
+
+    Action Items / Tasks:
+    - Inspect the phone number input component and its state / `onChange` handler in the profile view.
+    - Fix the input formatting / mask to cleanly accept and preserve full phone numbers without clearing previous digits.
+    - Validate proper state persistence upon form submission.
+
+[x] Bug 5: Multi-Item Order Placement Fails ("Failed to place order")
+    Severity: High / Blocker
+
+    Affected Area: Cart / Checkout, Order Placement Endpoint (/api/orders or checkout flow)
+
+    Description:
+    When a customer attempts to place an order containing multiple products (e.g., 3 products at once), the transaction fails with the error message "Failed to place order".
+
+    Root Cause Analysis:
+    - Payload mismatch or serialization issue in frontend cart submission when sending multi-item arrays.
+    - Backend order creation service / transaction failing on batch validation, inventory checks, or database insert loops for multiple items.
+
+    Action Items / Tasks:
+    - Inspect the checkout request payload sent by the frontend for orders with 3+ items.
+    - Inspect backend order controller / order creation route and database models for handling multi-item arrays and transactions.
+    - Ensure correct validation, pricing calculation, and atomic creation of order items.
