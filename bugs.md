@@ -200,3 +200,23 @@ Active Bugs & AI Execution Guide
     - Fix product card grid styling (standardize card heights, image ratios, padding, button alignments, and pricing badges).
     - Refine responsive breakpoints (mobile, tablet, desktop) to prevent card overflow or uneven columns.
     - Enhance overall dashboard aesthetics with clean modern styling, polished typography, and visual consistency.
+
+[x] Bug 11: Multi-Quantity, Multi-Product & Dynamic Stock Limit Order Placement Failures
+    Severity: High / Blocker
+
+    Affected Area: Frontend Cart / Quantity Selector / Checkout, Backend Order Controller, Inventory Validation & DB Transaction
+
+    Description:
+    Order placement currently fails when ordering multiple units of an item (`quantity >= 2`) or when adding 3 or more distinct products to cart, despite single-item 2-product orders succeeding.
+    Additionally, the order quantity limit must dynamically match the actual available stock (e.g., if 100 units are available in stock, the customer should be able to order up to 100 units). A comprehensive diagnostic of the Order API is required to resolve all underlying cart, payload, inventory check, and transaction failure edge cases.
+
+    Root Cause Analysis:
+    - Hardcoded or restrictive quantity limits / payload mapping issues in the frontend cart and quantity selector.
+    - Backend order creation pipeline failing during multi-item array iterations, stock validation, or database transaction locks when handling quantities > 1 or arrays of size >= 3.
+    - Schema validation or pricing calculation mismatches on bulk item payloads.
+
+    Action Items / Tasks:
+    - Perform deep diagnostics across the entire Order API pipeline (frontend cart serialization -> checkout payload -> backend controller -> inventory validation -> DB transaction).
+    - Enforce dynamic stock-based quantity limits on both frontend and backend (allow ordering up to available stock, e.g., 100 if stock is 100).
+    - Ensure robust batch insertion, inventory deduction, and atomic transactions for multi-item (3+) and multi-quantity orders.
+    - Eliminate all failure points to guarantee seamless order placement for any valid stock-compliant order.

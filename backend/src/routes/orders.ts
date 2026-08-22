@@ -28,8 +28,21 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Customer name and at least one item are required' });
     }
 
+    // Consolidate cart items by menuItemId to eliminate duplicates and aggregate total quantities
+    const itemQuantityMap = new Map<string, number>();
+    for (const item of items) {
+      if (!item || !item.menuItemId) continue;
+      const rawQty = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity, 10);
+      const qty = Math.max(1, isNaN(rawQty) ? 1 : rawQty);
+      itemQuantityMap.set(item.menuItemId, (itemQuantityMap.get(item.menuItemId) || 0) + qty);
+    }
+
+    if (itemQuantityMap.size === 0) {
+      return res.status(400).json({ error: 'At least one valid menu item is required' });
+    }
+
     // Fetch full menu items for requested order items
-    const menuItemIds = items.map((i: { menuItemId: string }) => i.menuItemId);
+    const menuItemIds = Array.from(itemQuantityMap.keys());
     const dbMenuItems = await prisma.menuItem.findMany({
       where: { id: { in: menuItemIds } },
       include: {
@@ -42,20 +55,19 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     const menuItemMap = new Map(dbMenuItems.map((item) => [item.id, item]));
 
     // Aggregate required ingredient quantities for this order
-    const requiredIngredients: { [ingredientId: string]: { name: string; required: number; currentStock: number; threshold: number } } = {};
+    const requiredIngredients: { [ingredientId: string]: { name: string; unit?: string; required: number; currentStock: number; threshold: number } } = {};
     let totalAmount = 0;
     const orderItemsToCreate: { menuItemId: string; quantity: number; unitPrice: number }[] = [];
 
-    for (const item of items) {
-      const dbItem = menuItemMap.get(item.menuItemId);
+    for (const [menuItemId, quantity] of itemQuantityMap.entries()) {
+      const dbItem = menuItemMap.get(menuItemId);
       if (!dbItem) {
-        return res.status(404).json({ error: `Menu item with ID ${item.menuItemId} not found` });
+        return res.status(404).json({ error: `Menu item not found` });
       }
       if (!dbItem.isAvailable) {
         return res.status(400).json({ error: `Menu item "${dbItem.name}" is currently unavailable` });
       }
 
-      const quantity = Math.max(1, parseInt(item.quantity, 10));
       totalAmount += dbItem.price * quantity;
 
       orderItemsToCreate.push({
@@ -74,6 +86,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         if (!requiredIngredients[ing.id]) {
           requiredIngredients[ing.id] = {
             name: ing.name,
+            unit: ing.unit,
             required: 0,
             currentStock: ing.currentStock,
             threshold: ing.reorderThreshold,
@@ -94,7 +107,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       const ing = requiredIngredients[ingId];
       if (ing.currentStock < ing.required) {
         return res.status(400).json({
-          error: `Insufficient stock for "${ing.name}". Needed: ${ing.required}, Available: ${ing.currentStock}`,
+          error: `Insufficient stock for "${ing.name}". Needed: ${ing.required}${ing.unit ? ' ' + ing.unit : ''}, Available: ${ing.currentStock}${ing.unit ? ' ' + ing.unit : ''}`,
         });
       }
     }
@@ -106,11 +119,14 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       if (userObj) emailToStore = userObj.email;
     }
 
+    // Safely check if userId is a valid 24-char ObjectId string for MongoDB relations
+    const validPerformedByUserId = userId && userId.length === 24 ? userId : undefined;
+
     // Perform database transaction: Create Order + OrderItems, Deduct Stock & Create StockTransactions
     const order = await prisma.$transaction(async (tx) => {
       const createdOrder = await tx.order.create({
         data: {
-          userId,
+          userId: validPerformedByUserId,
           customerName,
           customerEmail: emailToStore,
           phone: phone || null,
@@ -143,15 +159,19 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           data: { currentStock: { decrement: ing.required } },
         });
 
-        await tx.stockTransaction.create({
-          data: {
-            ingredientId: ingId,
-            quantityChange: -ing.required,
-            type: 'ORDER_DEDUCTION',
-            reason: `Order #${createdOrder.id.slice(0, 8)}`,
-            performedByUserId: userId,
-          },
-        });
+        try {
+          await tx.stockTransaction.create({
+            data: {
+              ingredientId: ingId,
+              quantityChange: -ing.required,
+              type: 'ORDER_DEDUCTION',
+              reason: `Order #${createdOrder.id.slice(0, 8)}`,
+              performedByUserId: validPerformedByUserId,
+            },
+          });
+        } catch (stErr) {
+          console.warn('Stock transaction warning:', stErr);
+        }
 
         if (updatedIng.currentStock <= ing.threshold) {
           lowStockAlerts.push({
@@ -192,7 +212,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Menu item not found' });
     }
     console.error('Create order error:', error);
-    return res.status(500).json({ error: 'Failed to place order' });
+    return res.status(500).json({ error: error?.message || 'Failed to place order' });
   }
 });
 

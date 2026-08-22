@@ -320,7 +320,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       <Minus size={14} />
                     </button>
                     <span className="qty-val">{item.quantity}</span>
-                    <button className="qty-btn" onClick={() => onUpdateQty(item.menuItem.id, 1)} title="Increase quantity">
+                    <button
+                      className="qty-btn"
+                      onClick={() => onUpdateQty(item.menuItem.id, 1)}
+                      disabled={item.quantity >= (item.menuItem.availableStock ?? 999)}
+                      title="Increase quantity"
+                    >
                       <Plus size={14} />
                     </button>
                   </div>
