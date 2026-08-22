@@ -41,6 +41,8 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
   });
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
+  const [profileOrders, setProfileOrders] = useState<Order[]>(orders);
+
   useEffect(() => {
     if (currentUser) {
       setName(currentUser.name || '');
@@ -48,9 +50,27 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    setProfileOrders(orders);
+  }, [orders]);
+
+  useEffect(() => {
+    if (isOpen && currentUser) {
+      api.get('/orders')
+        .then((res) => {
+          if (Array.isArray(res.orders)) {
+            setProfileOrders(res.orders);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch profile orders:', err);
+        });
+    }
+  }, [isOpen, currentUser]);
+
   if (!isOpen || !currentUser) return null;
 
-  const userOrders = orders.filter(
+  const userOrders = profileOrders.filter(
     (o) =>
       o.userId === currentUser.id ||
       (currentUser.email && o.customerEmail?.toLowerCase() === currentUser.email.toLowerCase()) ||
@@ -66,6 +86,7 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
     try {
       const res = await api.put('/auth/profile', { name, phone });
       onUpdateUser(res.user);
+      localStorage.setItem('cafe_user', JSON.stringify(res.user));
       setProfileMsg({ type: 'success', text: 'Personal details updated successfully!' });
     } catch (err: any) {
       setProfileMsg({ type: 'error', text: err.message || 'Failed to update profile' });
@@ -117,6 +138,7 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
       // Refresh user profile with new addresses
       const meRes = await api.get('/auth/me');
       onUpdateUser(meRes.user);
+      localStorage.setItem('cafe_user', JSON.stringify(meRes.user));
       setIsAddAddressOpen(false);
     } catch (err: any) {
       alert(err.message || 'Failed to save address');
@@ -132,6 +154,7 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
       await api.delete(`/auth/addresses/${addressId}`);
       const meRes = await api.get('/auth/me');
       onUpdateUser(meRes.user);
+      localStorage.setItem('cafe_user', JSON.stringify(meRes.user));
     } catch (err: any) {
       alert(err.message || 'Failed to delete address');
     }
@@ -143,6 +166,7 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
       await api.put(`/auth/addresses/${addr.id}`, { isDefault: true });
       const meRes = await api.get('/auth/me');
       onUpdateUser(meRes.user);
+      localStorage.setItem('cafe_user', JSON.stringify(meRes.user));
     } catch (err: any) {
       alert(err.message || 'Failed to set default address');
     }

@@ -17,7 +17,15 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     return res.status(401).json({ error: 'Unauthorized: Missing or invalid token format' });
   }
 
-  const token = authHeader.split(' ')[1];
+  let token = authHeader.split(' ')[1];
+  if (token) {
+    token = token.replace(/^"(.*)"$/, '$1').trim();
+  }
+
+  if (!token || token === 'null' || token === 'undefined') {
+    return res.status(401).json({ error: 'Unauthorized: Missing or invalid token format' });
+  }
+
   try {
     const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
     req.user = decoded;

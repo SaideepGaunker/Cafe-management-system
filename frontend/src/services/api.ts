@@ -9,8 +9,14 @@ const getBaseUrl = (): string => {
 const API_BASE_URL = getBaseUrl();
 
 const getAuthHeader = (): Record<string, string> => {
-  const token = localStorage.getItem('cafe_auth_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  let token = localStorage.getItem('cafe_auth_token');
+  if (token) {
+    token = token.replace(/^"(.*)"$/, '$1').trim();
+    if (token && token !== 'null' && token !== 'undefined') {
+      return { Authorization: `Bearer ${token}` };
+    }
+  }
+  return {};
 };
 
 export const api = {
