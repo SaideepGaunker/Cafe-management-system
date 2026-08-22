@@ -50,7 +50,12 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
 
   if (!isOpen || !currentUser) return null;
 
-  const userOrders = orders.filter((o) => o.userId === currentUser.id || o.customerName === currentUser.name);
+  const userOrders = orders.filter(
+    (o) =>
+      o.userId === currentUser.id ||
+      (currentUser.email && o.customerEmail?.toLowerCase() === currentUser.email.toLowerCase()) ||
+      o.customerName === currentUser.name
+  );
 
   // Handle Profile Update
   const handleSaveProfile = async (e: React.FormEvent) => {

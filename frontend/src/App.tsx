@@ -38,11 +38,35 @@ const MainAppLayout: React.FC = () => {
   const [categories, setCategories] = useState<string[]>(['All']);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('cafe_cart_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCustomerAuthOpen, setIsCustomerAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [trackedOrderId, setTrackedOrderId] = useState<string | null>(null);
+  const [trackedOrderId, setTrackedOrderId] = useState<string | null>(() => {
+    return localStorage.getItem('cafe_tracked_order_id') || null;
+  });
+
+  const updateTrackedOrderId = (id: string | null) => {
+    setTrackedOrderId(id);
+    if (id) {
+      localStorage.setItem('cafe_tracked_order_id', id);
+    } else {
+      localStorage.removeItem('cafe_tracked_order_id');
+    }
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cafe_cart_items', JSON.stringify(cartItems));
+    } catch {}
+  }, [cartItems]);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -84,9 +108,10 @@ const MainAppLayout: React.FC = () => {
           if (meRes.user.role === 'STAFF' || meRes.user.role === 'ADMIN') {
             const ingRes = await api.get('/inventory');
             setIngredients(ingRes.ingredients);
-            const ordRes = await api.get('/orders');
-            setOrders(ordRes.orders);
           }
+
+          const ordRes = await api.get('/orders');
+          setOrders(ordRes.orders || []);
         } catch (err: any) {
           if (err?.message?.includes('Unauthorized') || err?.message?.includes('Invalid')) {
             localStorage.removeItem('cafe_auth_token');
@@ -100,7 +125,7 @@ const MainAppLayout: React.FC = () => {
         setIsAuthLoading(false);
         try {
           const ordRes = await api.get('/orders');
-          setOrders(ordRes.orders);
+          setOrders(ordRes.orders || []);
         } catch {}
       }
     } catch (error) {
@@ -133,9 +158,11 @@ const MainAppLayout: React.FC = () => {
     const onOrderCreated = (newOrder: Order) => {
       fetchData();
       if (currentUser?.role === 'STAFF' || currentUser?.role === 'ADMIN') {
-        setOrders((prev) => [newOrder, ...prev]);
+        setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
         addToast('New Order Placed!', `Order #${newOrder.id.slice(0, 8)} by ${newOrder.customerName}`, 'info');
-      } else if (currentUser && newOrder.userId === currentUser.id) {
+      } else if (currentUser && (newOrder.userId === currentUser.id || (currentUser.email && newOrder.customerEmail === currentUser.email))) {
+        setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
+        updateTrackedOrderId(newOrder.id);
         addToast('Order Confirmation', `Your order #${newOrder.id.slice(0, 8)} has been placed successfully!`, 'success');
       }
     };
@@ -144,7 +171,7 @@ const MainAppLayout: React.FC = () => {
       setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
       if (currentUser?.role === 'STAFF' || currentUser?.role === 'ADMIN') {
         addToast('Order Status Update', `Order #${updatedOrder.id.slice(0, 8)} is now ${updatedOrder.status}`, 'success');
-      } else if (currentUser && updatedOrder.userId === currentUser.id) {
+      } else if (currentUser && (updatedOrder.userId === currentUser.id || (currentUser.email && updatedOrder.customerEmail === currentUser.email))) {
         addToast('Your Order Updated', `Your order #${updatedOrder.id.slice(0, 8)} is now ${updatedOrder.status}`, 'success');
       }
     };
@@ -229,8 +256,12 @@ const MainAppLayout: React.FC = () => {
 
   const handleOrderPlaced = (order: Order, options?: { skipTracker?: boolean }) => {
     if (!options?.skipTracker) {
-      setTrackedOrderId(order.id);
+      updateTrackedOrderId(order.id);
     }
+    setCartItems([]);
+    try {
+      localStorage.removeItem('cafe_cart_items');
+    } catch {}
     addToast('Order Placed Successfully!', `Order #${order.id.slice(0, 8)} created`, 'success');
     checkOfflineQueue();
     fetchData();
@@ -332,9 +363,23 @@ const MainAppLayout: React.FC = () => {
                           selectedCategory={selectedCategory}
                           onSelectCategory={setSelectedCategory}
                           onAddToCart={handleAddToCart}
-                          onTrackOrder={() => {
-                            if (orders.length > 0) setTrackedOrderId(orders[0].id);
-                            else addToast('No Active Orders', 'Place an order first to track live status.', 'info');
+                          orders={orders}
+                          currentUser={currentUser}
+                          onTrackOrder={(targetOrderId?: string) => {
+                            if (targetOrderId) {
+                              updateTrackedOrderId(targetOrderId);
+                            } else {
+                              const activeOrder = orders.find((o) => ['PENDING', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status));
+                              if (activeOrder) {
+                                updateTrackedOrderId(activeOrder.id);
+                              } else if (orders.length > 0) {
+                                updateTrackedOrderId(orders[0].id);
+                              } else if (trackedOrderId) {
+                                // keep existing trackedOrderId
+                              } else {
+                                addToast('No Active Orders', 'Place an order first to track live status.', 'info');
+                              }
+                            }
                           }}
                         />
                       )
@@ -444,13 +489,13 @@ const MainAppLayout: React.FC = () => {
         currentUser={currentUser}
         onUpdateUser={(updatedUser) => setCurrentUser(updatedUser)}
         orders={orders}
-        onTrackOrder={(orderId) => setTrackedOrderId(orderId)}
+        onTrackOrder={(orderId) => updateTrackedOrderId(orderId)}
       />
 
       {/* Customer Order Tracker */}
       <OrderTrackerModal
         orderId={trackedOrderId}
-        onClose={() => setTrackedOrderId(null)}
+        onClose={() => updateTrackedOrderId(null)}
       />
 
       <ToastContainer toasts={toasts} onDismiss={removeToast} />

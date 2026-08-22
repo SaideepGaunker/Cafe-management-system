@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Plus, Info } from 'lucide-react';
-import type { MenuItem } from '../types';
+import { Search, Plus, Info, ChevronRight } from 'lucide-react';
+import type { MenuItem, Order, User } from '../types';
 
 interface CustomerDashboardProps {
   menuItems: MenuItem[];
@@ -8,7 +8,9 @@ interface CustomerDashboardProps {
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
   onAddToCart: (item: MenuItem) => void;
-  onTrackOrder: () => void;
+  onTrackOrder: (orderId?: string) => void;
+  orders?: Order[];
+  currentUser?: User | null;
 }
 
 export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
@@ -18,9 +20,18 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onSelectCategory,
   onAddToCart,
   onTrackOrder,
+  orders = [],
+  currentUser,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeRecipeItem, setActiveRecipeItem] = useState<MenuItem | null>(null);
+
+  // Find live active in-progress order
+  const activeOrders = orders.filter((o) =>
+    ['PENDING', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY'].includes(o.status) &&
+    (!currentUser || o.userId === currentUser.id || (currentUser.email && o.customerEmail?.toLowerCase() === currentUser.email.toLowerCase()) || o.customerName === currentUser.name)
+  );
+  const currentActiveOrder = activeOrders[0];
 
   const filteredItems = menuItems.filter((item) => {
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
@@ -43,11 +54,62 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         <button
           className="btn-primary"
           style={{ marginTop: '20px' }}
-          onClick={onTrackOrder}
+          onClick={() => onTrackOrder(currentActiveOrder?.id)}
         >
           Track Active Order ➔
         </button>
       </div>
+
+      {/* Live Active Order In Progress Banner */}
+      {currentActiveOrder && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(16, 185, 129, 0.15))',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '28px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#F59E0B', boxShadow: '0 0 8px #F59E0B' }}></span>
+              <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em', color: 'var(--accent-amber)' }}>
+                Active Order In Progress
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                #{currentActiveOrder.id.slice(0, 8)}
+              </span>
+            </div>
+
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '4px' }}>
+              {currentActiveOrder.status === 'PENDING' && '⏳ Order Received — Sent to Kitchen'}
+              {currentActiveOrder.status === 'IN_PROGRESS' && '🔥 Preparing Order — Baristas crafting your brew'}
+              {currentActiveOrder.status === 'READY' && '☕ Ready for Store Pickup — Fresh & Ready at Counter'}
+              {currentActiveOrder.status === 'OUT_FOR_DELIVERY' && '🚚 Out for Delivery — Courier on the way!'}
+            </div>
+
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              {currentActiveOrder.items?.map((i) => `${i.quantity}x ${i.menuItem?.name || 'Item'}`).join(', ')} • ${currentActiveOrder.totalAmount.toFixed(2)}
+            </div>
+          </div>
+
+          <button
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px' }}
+            onClick={() => onTrackOrder(currentActiveOrder.id)}
+          >
+            <span>Live Order Tracker</span>
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
 
       {/* Search & Category Filter */}
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '24px' }}>

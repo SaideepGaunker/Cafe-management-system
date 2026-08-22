@@ -199,7 +199,13 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         if (decoded.role === 'STAFF' || decoded.role === 'ADMIN') {
           whereClause = {}; // Full access for Kitchen KDS & Admin Portal
         } else if (decoded.role === 'CUSTOMER') {
-          whereClause = { userId: decoded.userId }; // Customers only see their own orders
+          const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+          whereClause = {
+            OR: [
+              { userId: decoded.userId },
+              ...(user?.email ? [{ customerEmail: user.email }] : []),
+            ],
+          };
         }
       } catch {}
     }
