@@ -4,6 +4,7 @@ Active Bugs & AI Execution Guide
 * You have full autonomy to inspect files, edit code, and make necessary fixes across the codebase.
 * Do not hesitate to apply full fixes or modify files as needed to resolve the issues completely.
 * After resolving an issue, mark the corresponding checkbox from `[ ]` to `[x]`. Leave unresolved or pending items as `[ ]`.
+* Pushing the code to the gate to perform test cases and then once the test cases have passed, you push the code. 
 
 ## Bug Checklist
 [x] Bug 1: Authentication Token Missing/Malformed on Protected Profile & Order Requests
@@ -167,3 +168,35 @@ Active Bugs & AI Execution Guide
     - Inspect the component/modal activated by the "Track Product" button.
     - Wire WebSocket / Socket.io listeners and room subscriptions into the inner "Track Product" component.
     - Verify that order status steps (Pending -> Preparing -> Ready -> Delivered/Completed) advance live in the inner tracking view without requiring manual page refresh.
+
+[x] Bug 9: Rebuild Dashboard-Level Live Order Tracker (As Implemented in Bug 2)
+    Severity: High
+
+    Affected Area: Customer Dashboard, Live Order Tracking Component
+
+    Description:
+    Remove the current order tracking implementation and rebuild the dashboard-level live order tracking banner/component that was previously working and updating in real-time (as originally implemented in Bug 2 directly on the dashboard).
+
+    Root Cause Analysis:
+    - The previous dashboard-embedded tracking component was functioning correctly with real-time socket events before being removed.
+
+    Action Items / Tasks:
+    - Re-implement/restore the live order tracking widget directly on the Customer Dashboard as implemented in Bug 2.
+    - Ensure real-time WebSocket listeners connect to this dashboard widget so status updates reflect immediately without page refreshes.
+    - Clean up any broken or redundant alternative tracking flows.
+
+[x] Bug 10: Product Cards Alignment & Comprehensive Dashboard UI/Styling Overhaul
+    Severity: High
+
+    Affected Area: Customer Dashboard, Product Cards Grid, Card Layout & Typography
+
+    Description:
+    The UI of the product cards is disaligned and improperly structured. The product cards, grid spacing, layout hierarchy, and overall customer dashboard styling require a complete design and alignment overhaul.
+
+    Root Cause Analysis:
+    - Inconsistent card dimensions, uneven padding/margins, image container aspect ratio mismatches, and flexbox/grid alignment discrepancies causing broken alignment across different screen sizes.
+
+    Action Items / Tasks:
+    - Fix product card grid styling (standardize card heights, image ratios, padding, button alignments, and pricing badges).
+    - Refine responsive breakpoints (mobile, tablet, desktop) to prevent card overflow or uneven columns.
+    - Enhance overall dashboard aesthetics with clean modern styling, polished typography, and visual consistency.
