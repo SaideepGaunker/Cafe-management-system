@@ -37,10 +37,20 @@ export const OrderTrackerModal: React.FC<OrderTrackerModalProps> = ({ orderId, o
       }
     };
 
+    const handleDataUpdated = () => {
+      api.get(`/orders/public/${orderId}`)
+        .then((res) => {
+          if (res.order) setOrder(res.order);
+        })
+        .catch(() => {});
+    };
+
     socket.on('orderStatusUpdated', handleStatusUpdate);
+    socket.on('dataUpdated', handleDataUpdated);
 
     return () => {
       socket.off('orderStatusUpdated', handleStatusUpdate);
+      socket.off('dataUpdated', handleDataUpdated);
     };
   }, [orderId]);
 

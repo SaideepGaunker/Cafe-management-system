@@ -119,3 +119,20 @@ Active Bugs & AI Execution Guide
     - Inspect the checkout request payload sent by the frontend for orders with 3+ items.
     - Inspect backend order controller / order creation route and database models for handling multi-item arrays and transactions.
     - Ensure correct validation, pricing calculation, and atomic creation of order items.
+
+[x] Bug 6: Redundant Dashboard Live Order Status Component & Broken Real-Time Updates in Original "Track Product" View
+    Severity: Medium / High
+
+    Affected Area: Customer Dashboard, "Track Product" View / Modal
+
+    Description:
+    A duplicate live order status widget was mistakenly added directly onto the customer dashboard. The original application already possesses a dedicated live order status component accessible when clicking "Track Product", but it was not receiving live real-time updates. The newly added duplicate dashboard component must be removed, and real-time socket event updates must be fixed in the existing "Track Product" view instead.
+
+    Root Cause Analysis:
+    - Redundant UI widget introduced to the dashboard instead of repairing the pre-existing tracking component.
+    - The original "Track Product" component lacks proper socket subscription / state synchronization to reactively update its stage/status upon backend order status events.
+
+    Action Items / Tasks:
+    - Remove the newly inserted duplicate live order tracking widget from the customer dashboard.
+    - Locate the original "Track Product" component / modal opened via the track button.
+    - Connect WebSocket real-time listeners (`order_status_updated` / socket events) to the original "Track Product" component to update live order status dynamically without requiring manual reloads.
