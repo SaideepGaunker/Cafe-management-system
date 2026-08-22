@@ -123,71 +123,89 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     const validPerformedByUserId = userId && userId.length === 24 ? userId : undefined;
 
     // Perform database transaction: Create Order + OrderItems, Deduct Stock & Create StockTransactions
-    const order = await prisma.$transaction(async (tx) => {
-      const createdOrder = await tx.order.create({
-        data: {
-          userId: validPerformedByUserId,
-          customerName,
-          customerEmail: emailToStore,
-          phone: phone || null,
-          deliveryAddress: deliveryAddress || null,
-          deliveryNotes: deliveryNotes || null,
-          deliveryFee: fee,
-          tableNumber: tableNumber || (orderType === 'DELIVERY' ? 'Home Delivery' : 'Counter'),
-          orderType: orderType || 'DELIVERY',
-          status: 'PENDING',
-          totalAmount,
-          items: {
-            create: orderItemsToCreate,
+    const order = await prisma.$transaction(
+      async (tx) => {
+        const createdOrder = await tx.order.create({
+          data: {
+            userId: validPerformedByUserId,
+            customerName,
+            customerEmail: emailToStore,
+            phone: phone || null,
+            deliveryAddress: deliveryAddress || null,
+            deliveryNotes: deliveryNotes || null,
+            deliveryFee: fee,
+            tableNumber: tableNumber || (orderType === 'DELIVERY' ? 'Home Delivery' : 'Counter'),
+            orderType: orderType || 'DELIVERY',
+            status: 'PENDING',
+            totalAmount,
+            items: {
+              create: orderItemsToCreate,
+            },
           },
-        },
-        include: {
-          items: {
-            include: { menuItem: true },
+          include: {
+            items: {
+              include: { menuItem: true },
+            },
+            user: {
+              select: { name: true, email: true },
+            },
           },
-          user: {
-            select: { name: true, email: true },
-          },
-        },
-      });
-
-      // Deduct ingredient stock atomically and log transaction
-      const lowStockAlerts: { id: string; name: string; currentStock: number; threshold: number }[] = [];
-
-      for (const ingId in requiredIngredients) {
-        const ing = requiredIngredients[ingId];
-
-        const updatedIng = await tx.ingredient.update({
-          where: { id: ingId },
-          data: { currentStock: { decrement: ing.required } },
         });
 
-        try {
-          await tx.stockTransaction.create({
-            data: {
-              ingredientId: ingId,
-              quantityChange: -ing.required,
-              type: 'ORDER_DEDUCTION',
-              reason: `Order #${createdOrder.id.slice(0, 8)}`,
-              performedByUserId: validPerformedByUserId,
-            },
-          });
-        } catch (stErr) {
-          console.warn('Stock transaction warning:', stErr);
+        // Deduct ingredient stock concurrently and log stock transactions
+        const lowStockAlerts: { id: string; name: string; currentStock: number; threshold: number }[] = [];
+        const ingIds = Object.keys(requiredIngredients);
+
+        // Update all ingredient stock levels in parallel within transaction
+        const updatedIngredients = await Promise.all(
+          ingIds.map((ingId) => {
+            const ing = requiredIngredients[ingId];
+            return tx.ingredient.update({
+              where: { id: ingId },
+              data: { currentStock: { decrement: ing.required } },
+            });
+          })
+        );
+
+        // Record stock transactions in parallel within transaction
+        await Promise.all(
+          ingIds.map((ingId) => {
+            const ing = requiredIngredients[ingId];
+            return tx.stockTransaction
+              .create({
+                data: {
+                  ingredientId: ingId,
+                  quantityChange: -ing.required,
+                  type: 'ORDER_DEDUCTION',
+                  reason: `Order #${createdOrder.id.slice(0, 8)}`,
+                  performedByUserId: validPerformedByUserId,
+                },
+              })
+              .catch((stErr) => {
+                console.warn('Stock transaction warning:', stErr);
+              });
+          })
+        );
+
+        for (const updatedIng of updatedIngredients) {
+          const ing = requiredIngredients[updatedIng.id];
+          if (updatedIng.currentStock <= ing.threshold) {
+            lowStockAlerts.push({
+              id: updatedIng.id,
+              name: ing.name,
+              currentStock: updatedIng.currentStock,
+              threshold: ing.threshold,
+            });
+          }
         }
 
-        if (updatedIng.currentStock <= ing.threshold) {
-          lowStockAlerts.push({
-            id: ingId,
-            name: ing.name,
-            currentStock: updatedIng.currentStock,
-            threshold: ing.threshold,
-          });
-        }
+        return { createdOrder, lowStockAlerts };
+      },
+      {
+        maxWait: 15000,
+        timeout: 30000,
       }
-
-      return { createdOrder, lowStockAlerts };
-    });
+    );
 
     // Real-time broadcast
     emitOrderCreated(order.createdOrder);

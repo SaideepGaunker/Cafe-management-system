@@ -207,16 +207,16 @@ Active Bugs & AI Execution Guide
     Affected Area: Frontend Cart / Quantity Selector / Checkout, Backend Order Controller, Inventory Validation & DB Transaction
 
     Description:
-    Order placement currently fails when ordering multiple units of an item (`quantity >= 2`) or when adding 3 or more distinct products to cart, despite single-item 2-product orders succeeding.
-    Additionally, the order quantity limit must dynamically match the actual available stock (e.g., if 100 units are available in stock, the customer should be able to order up to 100 units). A comprehensive diagnostic of the Order API is required to resolve all underlying cart, payload, inventory check, and transaction failure edge cases.
+    Order placement failed when ordering multiple units of an item (`quantity >= 2`) or when adding 3 or more distinct products to cart, throwing `Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5253 ms passed since the start of the transaction.` during `prisma.ingredient.update()`.
+    Additionally, the order quantity limit must dynamically match the actual available stock (e.g., if 100 units are available in stock, the customer should be able to order up to 100 units).
 
     Root Cause Analysis:
-    - Hardcoded or restrictive quantity limits / payload mapping issues in the frontend cart and quantity selector.
-    - Backend order creation pipeline failing during multi-item array iterations, stock validation, or database transaction locks when handling quantities > 1 or arrays of size >= 3.
-    - Schema validation or pricing calculation mismatches on bulk item payloads.
+    - Default Prisma interactive transaction timeout (`5000ms`) was exceeded when processing multiple order items / ingredients sequentially (`tx.ingredient.update` and `tx.stockTransaction.create` ran in a sequential loop, multiplying network latency across remote MongoDB connections).
+    - Missing explicit timeout parameters `{ maxWait: 15000, timeout: 30000 }` on `prisma.$transaction`.
 
     Action Items / Tasks:
-    - Perform deep diagnostics across the entire Order API pipeline (frontend cart serialization -> checkout payload -> backend controller -> inventory validation -> DB transaction).
-    - Enforce dynamic stock-based quantity limits on both frontend and backend (allow ordering up to available stock, e.g., 100 if stock is 100).
-    - Ensure robust batch insertion, inventory deduction, and atomic transactions for multi-item (3+) and multi-quantity orders.
-    - Eliminate all failure points to guarantee seamless order placement for any valid stock-compliant order.
+    - [x] Configure explicit `maxWait: 15000` and `timeout: 30000` on Prisma interactive transactions in `backend/src/routes/orders.ts` and `inventory.ts`.
+    - [x] Parallelize ingredient updates and stock transaction logging using `Promise.all` inside the interactive transaction to drastically cut database round-trip latency.
+    - [x] Enforce dynamic stock-based quantity limits on both frontend and backend (allow ordering up to available stock, e.g., 100 if stock is 100).
+    - [x] Ensure robust batch insertion, inventory deduction, and atomic transactions for multi-item (3+) and multi-quantity orders.
+    - [x] Eliminate all failure points to guarantee seamless order placement for any valid stock-compliant order.

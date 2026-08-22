@@ -124,6 +124,9 @@ router.post('/restock', authenticate, requireRoles(['STAFF', 'ADMIN']), async (r
       }
 
       return { updatedIngredient, transaction };
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     emitDataUpdated();
@@ -152,6 +155,7 @@ router.get('/transactions', authenticate, requireRoles(['STAFF', 'ADMIN']), asyn
       take: 100,
     });
 
+    return res.json({ transactions });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch stock transactions' });
   }
